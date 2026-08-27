@@ -80,6 +80,7 @@ def test_server_args_default_to_released_droid_serving_config() -> None:
     assert args.checkpoint_path == "nvidia/Cosmos3-Nano-Policy-DROID"
     assert args.hf_revision == "main"
     assert args.domain_name == "droid_lerobot"
+    assert args.guardrails is True
     assert args.seed == 0
     assert args.resolution == "480"
     assert args.conditioning_fps == 15.0

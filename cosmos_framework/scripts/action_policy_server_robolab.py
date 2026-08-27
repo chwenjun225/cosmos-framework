@@ -323,6 +323,8 @@ class RobolabServerArgs(pydantic.BaseModel):
     """Action domain name passed to get_domain_id()."""
     decode_video: bool = False
     """If set, decode and return the predicted rollout video as a uint8 NumPy array."""
+    guardrails: bool = True
+    """Enable Cosmos text/video guardrails. Disable for fully offline serving without guardrail checkpoints."""
 
     output_dir: Path | None = None
     """Output directory for OmniInference. Defaults to /tmp/cosmos3_action_server/robolab."""
@@ -433,6 +435,7 @@ class RobolabPolicyService:
             "checkpoint_path": args.checkpoint_path,
             "output_dir": args.output_dir or _DEFAULT_ROBOLAB_OUTPUT_DIR,
             "sampler": args.sampler,
+            "guardrails": args.guardrails,
         }
         if args.experiment is not None:
             setup_overrides["experiment"] = args.experiment
