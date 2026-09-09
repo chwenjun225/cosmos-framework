@@ -35,6 +35,7 @@ def _resolved_values(config: Any) -> dict[str, Any]:
         "optimizer_type": config.optimizer.optimizer_type,
         "batch_size": config.dataloader_train.dataloader.batch_size,
         "max_samples_per_batch": config.dataloader_train.max_samples_per_batch,
+        "compile_tokenizer.enabled": config.trainer.callbacks.compile_tokenizer.enabled,
     }
 
 
@@ -51,8 +52,13 @@ def main() -> None:
         "optimizer_type": "AdamW",
         "batch_size": 1,
         "max_samples_per_batch": 1,
+        "compile_tokenizer.enabled": False,
     }
-    failures = [f"{key}={values[key]!r}, expected {value!r}" for key, value in expected.items() if values[key] != value]
+    failures = [
+        f"{key}={values[key]!r}, expected {value!r}"
+        for key, value in expected.items()
+        if values[key] != value
+    ]
     for key, value in values.items():
         print(f"{key} = {value}")
     if failures:

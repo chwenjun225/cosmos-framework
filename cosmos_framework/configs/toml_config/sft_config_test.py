@@ -228,3 +228,32 @@ class TestExampleTomlConfigs:
         overrides = build_hydra_overrides(raw)
         assert overrides[0] == "--"
         assert any(o.startswith("experiment=") for o in overrides), overrides
+
+
+@pytest.fixture
+def _action_recipe_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Provide path interpolations used while resolving action recipes."""
+    monkeypatch.setenv("BASE_CHECKPOINT_PATH", "/tmp/dummy_ckpt")
+    monkeypatch.setenv("COSMOS3_EDGE_PATH", "/tmp/dummy_edge")
+    monkeypatch.setenv("DROID_ROOT", "/tmp/dummy_droid")
+    monkeypatch.setenv("G1_DEX3_DATASETS", "all")
+    monkeypatch.setenv("G1_DEX3_ROOT", "/tmp/dummy_g1")
+    monkeypatch.setenv("WAN_VAE_PATH", "/tmp/dummy_vae.pth")
+
+
+class TestActionTokenizerCompileProfiles:
+    """Exercise the same TOML loader used by the real training entry point."""
+
+    def test_g1_edge_disables_tokenizer_compilation(self, _action_recipe_env: None) -> None:
+        config = _load_or_skip(_EXAMPLE_TOML_DIR / "action_policy_g1_dex3_edge.toml")
+
+        callback = config.trainer.callbacks.compile_tokenizer
+        assert callback.enabled is False
+        assert callback.warmup_resolutions is None
+
+    def test_droid_keeps_tokenizer_compilation(self, _action_recipe_env: None) -> None:
+        config = _load_or_skip(_EXAMPLE_TOML_DIR / "action_policy_droid_nano.toml")
+
+        callback = config.trainer.callbacks.compile_tokenizer
+        assert callback.enabled is True
+        assert list(callback.warmup_resolutions) == ["480"]

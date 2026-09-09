@@ -41,6 +41,13 @@ action_policy_g1_dex3_edge["job"].update(
     wandb_mode="disabled",
 )
 action_policy_g1_dex3_edge["model"]["config"] = _G1_EDGE_MODEL_CONFIG
+# AOT-compiling the Wan tokenizer after iteration 3 exceeds the 24 GiB RTX
+# 4090 memory budget. Keep the inherited callback registered, but make it a
+# complete no-op for this recipe only.
+action_policy_g1_dex3_edge["trainer"]["callbacks"]["compile_tokenizer"] = {
+    "enabled": False,
+    "warmup_resolutions": None,
+}
 # The native FusedAdam path keeps FP32 master weights and FP32 moments, which
 # cannot fit the selected 1.42B action/generation parameters on a 24 GiB GPU.
 # Cosmos3's native fused torch AdamW keeps the same AdamW hyperparameters while
