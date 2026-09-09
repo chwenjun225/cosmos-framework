@@ -189,11 +189,14 @@ def build_processor_lazy(
     honored when the config is instantiated.
     """
     if repository is not None:
-        from cosmos_framework.utils.checkpoint_db import CheckpointDirHf
-
         if revision is None:
             raise ValueError("'revision' is required when 'repository' is set")
-        local_path = CheckpointDirHf(repository=repository, revision=revision).download()
+        if os.path.isdir(os.path.expanduser(repository)):
+            local_path = os.path.abspath(os.path.expanduser(repository))
+        else:
+            from cosmos_framework.utils.checkpoint_db import CheckpointDirHf
+
+            local_path = CheckpointDirHf(repository=repository, revision=revision).download()
         if subdir:
             local_path = os.path.join(local_path, subdir)
         return sys.modules[__name__].build_processor(local_path, **kwargs)

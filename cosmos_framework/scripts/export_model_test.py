@@ -294,6 +294,14 @@ class TestProcessorSourceFromTokenizerNode:
         source = helpers.processor_source_from_tokenizer_node(node)
         assert source == {"repository": "nvidia/Cosmos3-Edge", "revision": "abc", "subdir": "processor"}
 
+    def test_repository_mode_accepts_local_snapshot(self, tmp_path):
+        node = {"repository": str(tmp_path), "revision": "main"}
+        assert helpers.processor_source_from_tokenizer_node(node) == {
+            "repository": str(tmp_path),
+            "revision": "main",
+            "subdir": "",
+        }
+
     def test_tokenizer_type_mode(self):
         # Qwen-family build_processor_lazy node (configs.base.defaults.reasoner).
         node = {
@@ -328,6 +336,25 @@ class TestProcessorSourceFromTokenizerNode:
     )
     def test_unusable_nodes_return_none(self, node):
         assert helpers.processor_source_from_tokenizer_node(node) is None
+
+
+def test_bundle_processor_from_local_tokenizer_node(tmp_path):
+    snapshot = tmp_path / "snapshot"
+    snapshot.mkdir()
+    (snapshot / "processor_config.json").write_text("{}")
+    (snapshot / "tokenizer.json").write_text("{}")
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+
+    source = helpers.bundle_processor_from_tokenizer_node(
+        {"repository": str(snapshot), "revision": "main"},
+        output_dir,
+    )
+
+    assert source is not None
+    assert source["repo"] == str(snapshot)
+    assert (output_dir / "processor_config.json").is_file()
+    assert (output_dir / "tokenizer.json").is_file()
 
 
 class TestResolveProcessorDownload:

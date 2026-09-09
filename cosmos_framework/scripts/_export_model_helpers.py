@@ -195,8 +195,8 @@ def bundle_processor_files(snapshot_root: Path, output_dir: Path) -> list[str]:
     return copied
 
 
-# Hugging Face repo ids are 'org/name'; anything else in a tokenizer node
-# (local directory, URI) has no hub snapshot to bundle from.
+# Hugging Face repo ids are 'org/name'. Local snapshot directories are also
+# accepted so offline training recipes can bundle their processor at export.
 _HF_REPO_ID_RE = re.compile(r"[\w.\-]+/[\w.\-]+")
 
 # Registered tokenizer snapshots live under this sanitized S3 prefix in the
@@ -227,12 +227,12 @@ def processor_source_from_tokenizer_node(tokenizer_node: Any) -> dict[str, Any] 
     Accepts 'repository' (+'revision'/'subdir') nodes, or a plain HF repo id in
     'tokenizer_type' / 'pretrained_model_name' (revision None, pinned later via
     the checkpoint registry). Returns {'repository', 'revision', 'subdir'}, or
-    None when the node names no HF repository (missing node, local dir, URI).
+    None when the node names neither an HF repository nor a local directory.
     """
     if not isinstance(tokenizer_node, dict):
         return None
     repository = tokenizer_node.get("repository")
-    if isinstance(repository, str) and _HF_REPO_ID_RE.fullmatch(repository):
+    if isinstance(repository, str) and (_HF_REPO_ID_RE.fullmatch(repository) or Path(repository).expanduser().is_dir()):
         return {
             "repository": repository,
             "revision": tokenizer_node.get("revision"),
@@ -295,8 +295,13 @@ def bundle_processor_from_tokenizer_node(
         )
         return None
     try:
-        checkpoint_dir = resolve_processor_download(source)
-        snapshot_path = checkpoint_dir.download() if download is None else download(checkpoint_dir)
+        repository = source["repository"]
+        if Path(repository).expanduser().is_dir():
+            snapshot_path = str(Path(repository).expanduser().resolve() / source.get("subdir", ""))
+            checkpoint_dir = None
+        else:
+            checkpoint_dir = resolve_processor_download(source)
+            snapshot_path = checkpoint_dir.download() if download is None else download(checkpoint_dir)
         copied = bundle_processor_files(Path(snapshot_path), output_dir)
     except Exception as e:
         log.warning(
@@ -307,8 +312,9 @@ def bundle_processor_from_tokenizer_node(
     if not copied:
         log.warning(f"Skipping processor bundling: no processor/tokenizer files found in '{snapshot_path}'.")
         return None
-    log.info(f"Bundled processor files from '{checkpoint_dir.repository}': {', '.join(copied)}")
-    return build_artifact_source(repo=checkpoint_dir.repository, resolved_path=snapshot_path, bundled=True)
+    source_name = repository if checkpoint_dir is None else checkpoint_dir.repository
+    log.info(f"Bundled processor files from '{source_name}': {', '.join(copied)}")
+    return build_artifact_source(repo=source_name, resolved_path=snapshot_path, bundled=True)
 
 
 def hf_revision_from_snapshot_path(path: str | Path) -> str | None:

@@ -30,7 +30,6 @@ from cosmos_framework.inference.common.public_model_config import build_public_m
 from cosmos_framework.inference.model import Cosmos3OmniConfig, Cosmos3OmniModel
 from cosmos_framework.utils.checkpoint_db import _CHECKPOINTS
 
-
 _AVAE_REGISTRY_URI = "s3://bucket/pretrained/tokenizers/audio/avae"
 
 
@@ -50,6 +49,19 @@ def _redirect_avae_to_local(hf_path):
         avae.hf._path = str(sound_tokenizer_dir)
 
 
+def _redirect_processor_to_local(model_dict, hf_path):
+    """Use processor assets bundled beside local/HF-cached model weights."""
+
+    if not (hf_path / "processor_config.json").is_file() or not (hf_path / "tokenizer.json").is_file():
+        return
+    try:
+        tokenizer = model_dict["config"]["vlm_config"]["tokenizer"]
+    except (KeyError, TypeError):
+        return
+    if isinstance(tokenizer, dict) and tokenizer.get("repository"):
+        tokenizer["repository"] = str(hf_path)
+
+
 class Args(pydantic.BaseModel):
     checkpoint: CheckpointOverrides
     """Hugging Face checkpoint."""
@@ -63,6 +75,7 @@ def convert_model_to_dcp(args: Args):
     hf_path = checkpoint_config.download_checkpoint()
     _redirect_avae_to_local(hf_path)
     model_dict = checkpoint_config.load_model_config_dict()
+    _redirect_processor_to_local(model_dict, hf_path)
     hf_config = Cosmos3OmniConfig(model=build_public_model_config(model_dict))
     hf_model = Cosmos3OmniModel.from_pretrained_dcp(hf_path, config=hf_config)
     state_dict = get_model_state_dict(hf_model.model)

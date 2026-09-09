@@ -139,7 +139,9 @@ def resolve_vision_checkpoint_path(
     configured_uri: str,
     download_checkpoint: Callable[[str], str],
 ) -> str:
-    """Use a local vision checkpoint when supplied, otherwise download the configured checkpoint."""
+    """Use an explicit or configured local checkpoint before downloading."""
     if local_path is not None:
         return local_path
+    if Path(configured_uri).expanduser().is_dir():
+        return str(Path(configured_uri).expanduser().resolve())
     return download_checkpoint(configured_uri)

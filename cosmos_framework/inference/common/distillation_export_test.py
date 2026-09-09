@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: OpenMDW-1.1
 
 import copy
+from pathlib import Path
 
 import pytest
 
@@ -10,7 +11,6 @@ from cosmos_framework.inference.common.distillation_export import (
     build_student_checkpoint_metadata,
     sanitize_student_model_config,
 )
-
 
 
 def test_sanitize_student_model_config_removes_distillation_state() -> None:
@@ -298,4 +298,22 @@ def test_resolve_vision_checkpoint_path_prefers_local_override() -> None:
     )
 
     assert path == "/local/vision"
+    assert fallback_called is False
+
+
+def test_resolve_vision_checkpoint_path_uses_configured_local_directory(tmp_path: Path) -> None:
+    fallback_called = False
+
+    def download_checkpoint(_configured_uri: str) -> str:
+        nonlocal fallback_called
+        fallback_called = True
+        return "/downloaded/vision"
+
+    path = distillation_export.resolve_vision_checkpoint_path(
+        local_path=None,
+        configured_uri=str(tmp_path),
+        download_checkpoint=download_checkpoint,
+    )
+
+    assert path == str(tmp_path.resolve())
     assert fallback_called is False

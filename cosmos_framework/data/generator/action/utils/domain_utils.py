@@ -36,6 +36,8 @@ EMBODIMENT_TO_DOMAIN_ID: dict[str, int] = {
     # (camera+head+wrists, yesCam 36D) trains its own action2llm/llm2action
     # DomainAwareLinear weights from scratch instead of continuing agibot's.
     "webhumanaction_body": 24,
+    # Unitree G1 dual-arm + dual Dex3 absolute joint-position targets.
+    "unitree_g1_dex3": 25,
 }
 
 
@@ -62,6 +64,7 @@ EMBODIMENT_TO_RAW_ACTION_DIM: dict[str, int] = {
     "fractal": 10,
     "drawanything": 3,
     "behavior1k_lerobot": 23,  # base(3) trunk(4) arms(14) grippers(2)
+    "unitree_g1_dex3": 28,  # 14 arm joints + 14 Dex3 hand joints
     # NOTE: ``libero`` (7/10/13 depending on ``rotation_space``) and ``hand_pose``
     # (variable with ``keypoint_option`` and ``rotation_format``) are absent
     # because their raw width is set per-dataset at construction time. Inference

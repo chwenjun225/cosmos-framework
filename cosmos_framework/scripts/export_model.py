@@ -437,7 +437,11 @@ def export_model(args: Args) -> None:
             configured_uri=configured_vlm_checkpoint,
             download_checkpoint=download_vlm_checkpoint,
         )
-        vit_repo = resolved_repositories[0] if resolved_repositories else str(args.vit_checkpoint_path)
+        vit_repo = (
+            resolved_repositories[0]
+            if resolved_repositories
+            else str(args.vit_checkpoint_path or configured_vlm_checkpoint)
+        )
 
     # Load model
     log.info("Loading model...")
