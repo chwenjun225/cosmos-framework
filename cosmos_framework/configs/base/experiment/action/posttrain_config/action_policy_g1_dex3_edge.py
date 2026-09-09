@@ -3,9 +3,9 @@
 
 """Cosmos3-Edge policy SFT recipe for Unitree G1 + dual Dex3 hands.
 
-This is the DROID action-policy recipe with only the embodiment, dataset, and
-Edge model baseline replaced. The native WAM loss, packing loader, action
-transform, optimizer, DCP loader, and checkpoint writer remain unchanged.
+This adapts the native DROID action-policy recipe to the G1 embodiment and Edge
+model while retaining its WAM loss, packing, transforms, DCP loading, and
+checkpoint writing.
 """
 
 import copy
@@ -22,6 +22,9 @@ from cosmos_framework.data.generator.action.datasets.action_sft_dataset import (
 from cosmos_framework.utils.lazy_config import LazyCall as L
 
 _G1_EDGE_MODEL_CONFIG = copy.deepcopy(EDGE_MODEL_CONFIG)
+_G1_EDGE_MODEL_CONFIG["ema"]["enabled"] = False
+_G1_EDGE_MODEL_CONFIG["parallelism"]["fsdp_master_dtype"] = "bfloat16"
+_G1_EDGE_MODEL_CONFIG["parallelism"]["fsdp_reduce_dtype"] = "bfloat16"
 _G1_EDGE_MODEL_CONFIG["tokenizer"]["encode_exact_durations"] = [33]
 _G1_EDGE_MODEL_CONFIG["tokenizer"]["vae_path"] = "${oc.env:WAN_VAE_PATH}"
 _G1_EDGE_MODEL_CONFIG["max_num_tokens_after_packing"] = -1
@@ -38,12 +41,17 @@ action_policy_g1_dex3_edge["job"].update(
     wandb_mode="disabled",
 )
 action_policy_g1_dex3_edge["model"]["config"] = _G1_EDGE_MODEL_CONFIG
+# The native FusedAdam path keeps FP32 master weights and FP32 moments, which
+# cannot fit the selected 1.42B action/generation parameters on a 24 GiB GPU.
+# Cosmos3's native fused torch AdamW keeps the same AdamW hyperparameters while
+# storing moments in the BF16 parameter dtype selected above.
+action_policy_g1_dex3_edge["optimizer"]["optimizer_type"] = "AdamW"
 action_policy_g1_dex3_edge["dataloader_train"]["dataset_name"] = "action_g1_dex3"
-action_policy_g1_dex3_edge["dataloader_train"]["max_samples_per_batch"] = 8
+action_policy_g1_dex3_edge["dataloader_train"]["max_samples_per_batch"] = 1
 
 rank_loader = action_policy_g1_dex3_edge["dataloader_train"]["dataloader"]
-rank_loader["batch_size"] = 4
-rank_loader["num_workers"] = 4
+rank_loader["batch_size"] = 1
+rank_loader["num_workers"] = 2
 rank_loader["datasets"] = {
     "g1_dex3": {
         "ratio": 1,

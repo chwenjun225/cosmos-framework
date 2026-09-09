@@ -15,9 +15,14 @@ wandb_mode = "disabled"
 [model]
 precision = "bfloat16"
 
+[model.ema]
+enabled = false
+
 [model.parallelism]
 data_parallel_shard_degree     = -1
 data_parallel_replicate_degree = 1
+fsdp_master_dtype              = "bfloat16"
+fsdp_reduce_dtype              = "bfloat16"
 
 [model.activation_checkpointing]
 mode           = "full"
@@ -33,7 +38,7 @@ lr = 2.0e-4
 cycle_lengths = [100000]
 
 [dataloader_train]
-max_samples_per_batch = 8
+max_samples_per_batch = 1
 
 [trainer]
 max_iter        = 10000

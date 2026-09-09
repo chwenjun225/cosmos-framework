@@ -173,6 +173,14 @@ class ParallelismConfig(BaseModel):
             "Almost always 1 for SFT."
         ),
     )
+    fsdp_master_dtype: str = Field(
+        default="float32",
+        description="Storage and optimizer dtype for FSDP master parameters.",
+    )
+    fsdp_reduce_dtype: str | None = Field(
+        default=None,
+        description="Gradient reduction dtype; None follows fsdp_master_dtype.",
+    )
 
 
 class CompileConfig(BaseModel):
