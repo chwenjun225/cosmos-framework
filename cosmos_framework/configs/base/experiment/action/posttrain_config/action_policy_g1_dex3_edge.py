@@ -23,6 +23,7 @@ from cosmos_framework.utils.lazy_config import LazyCall as L
 
 _G1_EDGE_MODEL_CONFIG = copy.deepcopy(EDGE_MODEL_CONFIG)
 _G1_EDGE_MODEL_CONFIG["tokenizer"]["encode_exact_durations"] = [33]
+_G1_EDGE_MODEL_CONFIG["tokenizer"]["vae_path"] = "${oc.env:WAN_VAE_PATH}"
 _G1_EDGE_MODEL_CONFIG["max_num_tokens_after_packing"] = -1
 # Reuse processor/tokenizer/config assets from the already-downloaded Edge
 # checkpoint. ``build_processor_lazy`` accepts this local directory directly.

@@ -13,6 +13,7 @@ init_script(
 
 import math
 import shutil
+from pathlib import Path
 from typing import Annotated
 
 import pydantic
@@ -62,11 +63,32 @@ def _redirect_processor_to_local(model_dict, hf_path):
         tokenizer["repository"] = str(hf_path)
 
 
+def _redirect_wan_vae_to_local(model_dict, wan_vae_path):
+    """Use an explicit local Wan2.2 VAE without checkpoint-registry lookup."""
+
+    if wan_vae_path is None:
+        return
+    local_path = Path(wan_vae_path).expanduser().resolve()
+    if not local_path.is_file():
+        raise FileNotFoundError(f"Local Wan2.2 VAE not found: {local_path}")
+    try:
+        tokenizer = model_dict["config"]["tokenizer"]
+    except (KeyError, TypeError) as error:
+        raise ValueError("Model config does not define a video tokenizer") from error
+    if not isinstance(tokenizer, dict):
+        raise TypeError("Model video tokenizer config must be a dictionary")
+    tokenizer["bucket_name"] = ""
+    tokenizer["object_store_credential_path_pretrained"] = ""
+    tokenizer["vae_path"] = str(local_path)
+
+
 class Args(pydantic.BaseModel):
     checkpoint: CheckpointOverrides
     """Hugging Face checkpoint."""
     output_path: Annotated[ResolvedPath, tyro.conf.arg(aliases=("-o",))]
     """Output DCP checkpoint directory."""
+    wan_vae_path: pydantic.FilePath | None = None
+    """Optional local Wan2.2 VAE file used while constructing the model."""
 
 
 def convert_model_to_dcp(args: Args):
@@ -76,6 +98,7 @@ def convert_model_to_dcp(args: Args):
     _redirect_avae_to_local(hf_path)
     model_dict = checkpoint_config.load_model_config_dict()
     _redirect_processor_to_local(model_dict, hf_path)
+    _redirect_wan_vae_to_local(model_dict, args.wan_vae_path)
     hf_config = Cosmos3OmniConfig(model=build_public_model_config(model_dict))
     hf_model = Cosmos3OmniModel.from_pretrained_dcp(hf_path, config=hf_config)
     state_dict = get_model_state_dict(hf_model.model)

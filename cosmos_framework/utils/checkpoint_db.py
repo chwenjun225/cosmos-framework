@@ -62,8 +62,8 @@ from typing import Annotated, Callable, TypeAlias
 import pydantic
 from typing_extensions import Self, override
 
-from cosmos_framework.utils.flags import EXPERIMENTAL_CHECKPOINTS, INTERNAL, StrEnum
 from cosmos_framework.utils import log
+from cosmos_framework.utils.flags import EXPERIMENTAL_CHECKPOINTS, INTERNAL, StrEnum
 
 _HF_CLI_PROJECT = Path(__file__).resolve().with_name("hf_cli")
 
@@ -148,6 +148,11 @@ def _hf_download(cmd_args: list[str]) -> str:
     Callers that make repeated downloads can set
     ``IMAGINAIRE_HF_CLI_ENVIRONMENT`` to reuse a dedicated environment.
     """
+    if os.environ.get("HF_HUB_OFFLINE", "").strip().lower() in {"1", "true", "yes", "on"}:
+        raise RuntimeError(
+            "Hugging Face download is disabled by HF_HUB_OFFLINE=1. "
+            "Provide an existing local checkpoint or asset path."
+        )
     is_rank0 = os.environ.get("RANK", "0") == "0"
     hf_cli_environment = os.environ.get("IMAGINAIRE_HF_CLI_ENVIRONMENT")
     cmd = [

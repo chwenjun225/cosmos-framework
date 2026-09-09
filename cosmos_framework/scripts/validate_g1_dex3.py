@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import math
 import sys
 from pathlib import Path
@@ -29,8 +30,6 @@ from cosmos_framework.data.generator.action.datasets.g1_dex3_lerobot_dataset imp
     validate_g1_dex3_file_closure,
 )
 from cosmos_framework.data.generator.processors import build_processor_lazy
-from cosmos_framework.inference.args import OmniSetupOverrides
-from cosmos_framework.inference.common.args import CheckpointOverrides
 from cosmos_framework.utils.lazy_config import LazyCall as L
 
 
@@ -155,23 +154,29 @@ def _validate_local_edge_checkpoint(path: Path) -> dict[str, Any]:
         "modular_model_index.json",
         "processor_config.json",
         "tokenizer.json",
+        "transformer/config.json",
         "transformer/diffusion_pytorch_model.safetensors.index.json",
     )
     missing = [name for name in required if not (path / name).is_file()]
     if missing:
         raise FileNotFoundError(f"{path}: missing local Edge assets {missing}")
-    checkpoint = CheckpointOverrides(checkpoint_path=str(path)).build_checkpoint(
-        checkpoints=OmniSetupOverrides.CHECKPOINTS
-    )
-    resolved = checkpoint.download_checkpoint().resolve()
-    if resolved != path.resolve():
-        raise RuntimeError(f"Local Edge checkpoint resolved to {resolved}, expected {path.resolve()}")
-    model_config = checkpoint.load_model_config_dict()["config"]
-    if int(model_config["max_action_dim"]) < G1_DEX3_ACTION_DIM:
+
+    # Read the architecture shipped with the local checkpoint directly. Using
+    # the inference checkpoint registry here is unnecessary and can resolve the
+    # registry's relative Wan VAE path by invoking the Hugging Face downloader.
+    transformer_config = json.loads((path / "transformer/config.json").read_text())
+    action_dim = int(transformer_config.get("action_dim", 0))
+    num_domains = int(transformer_config.get("num_embodiment_domains", 0))
+    if not transformer_config.get("action_gen", False):
+        raise ValueError("Cosmos3-Edge checkpoint does not enable action generation")
+    if action_dim < G1_DEX3_ACTION_DIM:
         raise ValueError("Cosmos3-Edge max_action_dim is smaller than the G1 action")
-    if int(model_config["num_embodiment_domains"]) <= G1_DEX3_DOMAIN_ID:
+    if num_domains <= G1_DEX3_DOMAIN_ID:
         raise ValueError("Cosmos3-Edge has no row for the G1 embodiment domain")
-    return model_config
+    return {
+        "max_action_dim": action_dim,
+        "num_embodiment_domains": num_domains,
+    }
 
 
 def _validate_transformed_sample(
