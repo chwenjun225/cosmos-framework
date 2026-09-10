@@ -201,6 +201,11 @@ def get_action_g1_dex3_sft_dataset(
     return sft
 
 
+# Export inspects the configured factory without instantiating the dataset.
+# Publish the fixed embodiment contract on that factory just as dataset classes do.
+setattr(get_action_g1_dex3_sft_dataset, "EMBODIMENT_TYPE", G1Dex3LeRobotDataset.EMBODIMENT_TYPE)
+
+
 def get_action_droid_merged_lerobot_sft_dataset(
     *,
     root: str,
