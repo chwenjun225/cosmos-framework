@@ -260,18 +260,6 @@ class CheckpointDirHf(_CheckpointHf):
 
     @override
     def _download(self) -> str:
-        # LOCAL_PATH_SUPPORT_PATCH
-        from pathlib import Path
-        local_repo = (
-            getattr(self, 'repo_id', None)
-            or getattr(self, 'repo', None)
-            or getattr(self, 'repository', None)
-        )
-        if local_repo:
-            local_path = Path(str(local_repo)).expanduser()
-            if local_path.exists():
-                return str(local_path.resolve())
-
         """Download checkpoint and return the local path."""
         include = list(self.include) or ["*"]
         exclude = list(self.exclude)
